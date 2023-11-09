@@ -10,8 +10,8 @@ import (
 	"sync"
 )
 
-// server Pop3服务实例
-type server struct {
+// Server Pop3服务实例
+type Server struct {
 	Domain     string // 域名
 	Port       int    // 端口
 	TlsEnabled bool   //是否启用Tls
@@ -22,8 +22,8 @@ type server struct {
 }
 
 // NewPop3Server 新建一个服务实例
-func NewPop3Server(port int, domain string, tlsEnabled bool, action Action) *server {
-	return &server{
+func NewPop3Server(port int, domain string, tlsEnabled bool, action Action) *Server {
+	return &Server{
 		Domain:     domain,
 		Port:       port,
 		TlsEnabled: tlsEnabled,
@@ -33,7 +33,7 @@ func NewPop3Server(port int, domain string, tlsEnabled bool, action Action) *ser
 }
 
 // Start 启动服务
-func (s *server) Start() error {
+func (s *Server) Start() error {
 	if s.lck.TryLock() {
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Port))
 		if err != nil {
@@ -59,19 +59,19 @@ func (s *server) Start() error {
 		}()
 		<-s.stop
 	} else {
-		return errors.New("server Is Running")
+		return errors.New("Server Is Running")
 	}
 
 	return nil
 }
 
 // Stop 停止服务
-func (s *server) Stop() {
+func (s *Server) Stop() {
 	s.close = true
 	s.stop <- true
 }
 
-func (s *server) handleClient(conn net.Conn) {
+func (s *Server) handleClient(conn net.Conn) {
 	defer conn.Close()
 
 	data := &Data{}
@@ -226,7 +226,8 @@ func (s *server) handleClient(conn net.Conn) {
 func getCommand(line string) (string, []string) {
 	line = strings.Trim(line, "\r \n")
 	cmd := strings.Split(line, " ")
-	return cmd[0], cmd[1:]
+
+	return strings.ToTitle(cmd[0]), cmd[1:]
 }
 
 func getSafeArg(args []string, nr int) string {

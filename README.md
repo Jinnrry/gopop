@@ -1,6 +1,6 @@
 # GoPOP
 
-A simple Go POP3 server library
+A simple Go POP3 Server library
 
 ```go
 
