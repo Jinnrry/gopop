@@ -54,7 +54,7 @@ func (s *Server) Start() error {
 						continue
 					}
 				}
-				_ = conn
+				go s.handleClient(conn)
 			}
 		}()
 		<-s.stop
@@ -208,6 +208,16 @@ func (s *Server) handleClient(conn net.Conn) {
 						fmt.Fprintf(conn, "+OK %s", eol)
 					}
 				}
+			}
+		case "REST":
+			if data.Status == TRANSACTION {
+				err := s.Action.Rest(data)
+				if err != nil {
+					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
+				} else {
+					fmt.Fprintf(conn, "+OK %s", eol)
+				}
+
 			}
 		case "QUIT":
 			if data.Status == TRANSACTION {
