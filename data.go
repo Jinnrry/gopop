@@ -1,5 +1,7 @@
 package gopop
 
+import "context"
+
 type Status int8
 
 const (
@@ -12,4 +14,5 @@ type Data struct {
 	Status    Status
 	User      string
 	DeleteIds []int64
+	ctx       context.Context
 }
