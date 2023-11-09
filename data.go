@@ -14,5 +14,5 @@ type Data struct {
 	Status    Status
 	User      string
 	DeleteIds []int64
-	ctx       context.Context
+	Ctx       context.Context
 }
