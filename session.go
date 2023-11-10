@@ -10,7 +10,7 @@ const (
 	UPDATE       Status = 3
 )
 
-type Data struct {
+type Session struct {
 	Status    Status
 	User      string
 	DeleteIds []int64

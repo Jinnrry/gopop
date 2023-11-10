@@ -77,7 +77,7 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	defer conn.Close()
 
-	data := &Data{}
+	session := &Session{}
 	var (
 		eol = "\r\n"
 	)
@@ -109,12 +109,24 @@ func (s *Server) handleClient(conn net.Conn) {
 			top<SP>msg#<SP>n<CRLF>	    top 命令用于获取某封邮件的邮件头和邮件体中的前n行内容，参数msg#表示邮件的序号，参数n表示要返回邮件的前几行内容。使用这条命令以提高 Web Mail系统（通过Web站点上收发邮件）中的邮件列表显示的处理效率，因为这种情况下不需要获取每封邮件的完整内容，而是仅仅需要获取每封邮件的邮件头信息。
 			noop<CRLF>	    noop 命令用于检测POP3客户端与POP3服务器的连接情况。
 			quit<CRLF>	    quit 命令表示要结束邮件接收过程，POP3服务器接收到此命令后，将删除所有设置了删除标记的邮件，并关闭与POP3客户端程序的网络连接。
+			capa<CRLF>  capa命令返回服务器支持的命令列表
 		*/
 
 		switch cmd {
+		case "CAPA":
+			commands, err := s.Action.Capa(session)
+			if err != nil {
+				fmt.Fprintf(conn, "-ERR %s%s", err.Error(), eol)
+			} else {
+				fmt.Fprintf(conn, "+OK Capability list follows%s", eol)
+				for _, command := range commands {
+					fmt.Fprintf(conn, "%s%s", command, eol)
+				}
+				fmt.Fprintf(conn, ".%s", eol)
+			}
 		case "USER":
 			userName := getSafeArg(args, 0)
-			cmdError = s.Action.User(data, userName)
+			cmdError = s.Action.User(session, userName)
 			if cmdError != nil {
 				fmt.Fprintf(conn, "-ERR The user %s doesn't belong here!"+eol, userName)
 			} else {
@@ -122,15 +134,15 @@ func (s *Server) handleClient(conn net.Conn) {
 			}
 		case "PASS":
 			password := getSafeArg(args, 0)
-			cmdError = s.Action.Pass(data, password)
+			cmdError = s.Action.Pass(session, password)
 			if cmdError != nil {
 				fmt.Fprintf(conn, "-ERR Password incorrect!"+eol)
 			} else {
 				fmt.Fprintf(conn, "+OK User signed in"+eol)
 			}
 		case "STAT":
-			if data.Status == TRANSACTION {
-				num, size, err := s.Action.Stat(data)
+			if session.Status == TRANSACTION {
+				num, size, err := s.Action.Stat(session)
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s%s", err.Error(), eol)
 				} else {
@@ -138,8 +150,8 @@ func (s *Server) handleClient(conn net.Conn) {
 				}
 			}
 		case "LIST":
-			if data.Status == TRANSACTION {
-				infos, err := s.Action.List(data, getSafeArg(args, 0))
+			if session.Status == TRANSACTION {
+				infos, err := s.Action.List(session, getSafeArg(args, 0))
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 				} else {
@@ -151,12 +163,12 @@ func (s *Server) handleClient(conn net.Conn) {
 				}
 			}
 		case "UIDL":
-			if data.Status == TRANSACTION {
+			if session.Status == TRANSACTION {
 				id, err := strconv.ParseInt(getSafeArg(args, 0), 10, 64)
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", "params error", eol)
 				} else {
-					unionId, err := s.Action.Uidl(data, id)
+					unionId, err := s.Action.Uidl(session, id)
 					if err != nil {
 						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 					} else {
@@ -166,13 +178,13 @@ func (s *Server) handleClient(conn net.Conn) {
 
 			}
 		case "TOP":
-			if data.Status == TRANSACTION {
+			if session.Status == TRANSACTION {
 				id, err1 := strconv.ParseInt(getSafeArg(args, 0), 10, 64)
 				line, err2 := strconv.Atoi(getSafeArg(args, 1))
 				if err1 != nil || err2 != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", "params error", eol)
 				} else {
-					res, err := s.Action.Top(data, id, line)
+					res, err := s.Action.Top(session, id, line)
 					if err != nil {
 						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 					} else {
@@ -183,12 +195,12 @@ func (s *Server) handleClient(conn net.Conn) {
 				}
 			}
 		case "RETR":
-			if data.Status == TRANSACTION {
+			if session.Status == TRANSACTION {
 				id, err := strconv.ParseInt(getSafeArg(args, 0), 10, 64)
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", "params error", eol)
 				} else {
-					res, size, err := s.Action.Retr(data, id)
+					res, size, err := s.Action.Retr(session, id)
 					if err != nil {
 						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 					} else {
@@ -199,12 +211,12 @@ func (s *Server) handleClient(conn net.Conn) {
 				}
 			}
 		case "DELE":
-			if data.Status == TRANSACTION {
+			if session.Status == TRANSACTION {
 				id, err := strconv.ParseInt(getSafeArg(args, 0), 10, 64)
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", "params error", eol)
 				} else {
-					err := s.Action.Delete(data, id)
+					err := s.Action.Delete(session, id)
 					if err != nil {
 						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 					} else {
@@ -213,8 +225,8 @@ func (s *Server) handleClient(conn net.Conn) {
 				}
 			}
 		case "REST":
-			if data.Status == TRANSACTION {
-				err := s.Action.Rest(data)
+			if session.Status == TRANSACTION {
+				err := s.Action.Rest(session)
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 				} else {
@@ -223,8 +235,8 @@ func (s *Server) handleClient(conn net.Conn) {
 
 			}
 		case "QUIT":
-			if data.Status == TRANSACTION {
-				s.Action.Quit(data)
+			if session.Status == TRANSACTION {
+				s.Action.Quit(session)
 				fmt.Fprintf(conn, "+OK Bye %s", eol)
 				conn.Close()
 			}
