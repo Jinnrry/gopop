@@ -93,7 +93,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		}
 
 		cmd, args := getCommand(rawLine)
-		slog.Debug("cmd", cmd, "args", args)
+		slog.Debug(fmt.Sprintf("cmd:%s args:%v", cmd, args))
 		var cmdError error
 
 		/*
