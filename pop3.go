@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strconv"
 	"strings"
@@ -72,6 +73,8 @@ func (s *Server) Stop() {
 }
 
 func (s *Server) handleClient(conn net.Conn) {
+	slog.Debug("pop3 conn")
+
 	defer conn.Close()
 
 	data := &Data{}
@@ -90,7 +93,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		}
 
 		cmd, args := getCommand(rawLine)
-
+		slog.Debug("cmd", cmd, "args", args)
 		var cmdError error
 
 		/*
