@@ -164,18 +164,16 @@ func (s *Server) handleClient(conn net.Conn) {
 			}
 		case "UIDL":
 			if session.Status == TRANSACTION {
-				id, err := strconv.ParseInt(getSafeArg(args, 0), 10, 64)
+				infos, err := s.Action.Uidl(session, getSafeArg(args, 0))
 				if err != nil {
-					fmt.Fprintf(conn, "-ERR %s %s", "params error", eol)
+					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 				} else {
-					unionId, err := s.Action.Uidl(session, id)
-					if err != nil {
-						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
-					} else {
-						fmt.Fprintf(conn, "+OK %d %s%s", id, unionId, eol)
+					fmt.Fprintf(conn, "+OK%s", eol)
+					for _, info := range infos {
+						fmt.Fprintf(conn, "%d %d%s", info.Id, info.UnionId, eol)
 					}
+					fmt.Fprintf(conn, "."+eol)
 				}
-
 			}
 		case "TOP":
 			if session.Status == TRANSACTION {
@@ -242,6 +240,23 @@ func (s *Server) handleClient(conn net.Conn) {
 			}
 		case "NOOP":
 			fmt.Fprintf(conn, "+OK %s", eol)
+		default:
+			rets, err := s.Action.Custom(session, cmd, args)
+			if err != nil {
+				fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
+			} else {
+				if len(rets) == 0 {
+					fmt.Fprintf(conn, "+OK %s", eol)
+				} else if len(rets) == 1 {
+					fmt.Fprintf(conn, "+OK %s%s", rets[0], eol)
+				} else {
+					fmt.Fprintf(conn, "+OK %s", eol)
+					for _, ret := range rets {
+						fmt.Fprintf(conn, "%s%s", ret, eol)
+					}
+					fmt.Fprintf(conn, ".%s", eol)
+				}
+			}
 		}
 
 	}
