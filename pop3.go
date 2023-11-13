@@ -273,7 +273,7 @@ func (s *Server) handleClient(conn net.Conn) {
 					if err != nil {
 						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 					} else {
-						fmt.Fprintf(conn, "+OK %s", eol)
+						fmt.Fprintf(conn, "+OK%s", eol)
 					}
 				}
 			}
@@ -283,7 +283,7 @@ func (s *Server) handleClient(conn net.Conn) {
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 				} else {
-					fmt.Fprintf(conn, "+OK %s", eol)
+					fmt.Fprintf(conn, "+OK%s", eol)
 				}
 
 			}
@@ -294,7 +294,22 @@ func (s *Server) handleClient(conn net.Conn) {
 				conn.Close()
 			}
 		case "NOOP":
-			fmt.Fprintf(conn, "+OK %s", eol)
+			fmt.Fprintf(conn, "+OK%s", eol)
+		case "STLS":
+			if s.TlsConfig == nil {
+				fmt.Fprintf(conn, "-ERR %s %s", "unsupport", eol)
+			} else {
+				tc := tls.Server(conn, s.TlsConfig)
+				err := tc.Handshake()
+				if err != nil {
+					slog.Error("STLS Error %+v", err)
+					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
+				}
+				session.Status = UNAUTHORIZED
+				session.Conn = tc
+				reader = bufio.NewReader(tc)
+				fmt.Fprintf(conn, "+OK%s", eol)
+			}
 		default:
 			rets, err := s.Action.Custom(session, cmd, args)
 			if err != nil {
