@@ -2,6 +2,7 @@ package gopop
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -13,9 +14,10 @@ import (
 
 // Server Pop3服务实例
 type Server struct {
-	Domain     string // 域名
-	Port       int    // 端口
-	TlsEnabled bool   //是否启用Tls
+	Domain     string      // 域名
+	Port       int         // 端口
+	TlsEnabled bool        //是否启用Tls
+	TlsConfig  *tls.Config // tls配置
 	Action     Action
 	stop       chan bool
 	close      bool
@@ -23,11 +25,12 @@ type Server struct {
 }
 
 // NewPop3Server 新建一个服务实例
-func NewPop3Server(port int, domain string, tlsEnabled bool, action Action) *Server {
+func NewPop3Server(port int, domain string, tlsEnabled bool, tlsConfig *tls.Config, action Action) *Server {
 	return &Server{
 		Domain:     domain,
 		Port:       port,
 		TlsEnabled: tlsEnabled,
+		TlsConfig:  tlsConfig,
 		Action:     action,
 		stop:       make(chan bool, 1),
 	}
@@ -35,6 +38,46 @@ func NewPop3Server(port int, domain string, tlsEnabled bool, action Action) *Ser
 
 // Start 启动服务
 func (s *Server) Start() error {
+	if !s.TlsEnabled {
+		return s.startWithoutTLS()
+	} else {
+		return s.startWithTLS()
+	}
+}
+
+func (s *Server) startWithTLS() error {
+	if s.lck.TryLock() {
+		listener, err := tls.Listen("tcp", fmt.Sprintf(":%d", s.Port), s.TlsConfig)
+		if err != nil {
+			return err
+		}
+		s.close = false
+		defer func() {
+			listener.Close()
+		}()
+
+		go func() {
+			for {
+				conn, err := listener.Accept()
+				if err != nil {
+					if s.close {
+						break
+					} else {
+						continue
+					}
+				}
+				go s.handleClient(conn)
+			}
+		}()
+		<-s.stop
+	} else {
+		return errors.New("Server Is Running")
+	}
+
+	return nil
+}
+
+func (s *Server) startWithoutTLS() error {
 	if s.lck.TryLock() {
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Port))
 		if err != nil {
