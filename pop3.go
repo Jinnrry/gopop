@@ -170,7 +170,7 @@ func (s *Server) handleClient(conn net.Conn) {
 				} else {
 					fmt.Fprintf(conn, "+OK%s", eol)
 					for _, info := range infos {
-						fmt.Fprintf(conn, "%d %d%s", info.Id, info.UnionId, eol)
+						fmt.Fprintf(conn, "%d %s%s", info.Id, info.UnionId, eol)
 					}
 					fmt.Fprintf(conn, "."+eol)
 				}
