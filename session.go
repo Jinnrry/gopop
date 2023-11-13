@@ -1,6 +1,9 @@
 package gopop
 
-import "context"
+import (
+	"context"
+	"net"
+)
 
 type Status int8
 
@@ -15,4 +18,6 @@ type Session struct {
 	User      string
 	DeleteIds []int64
 	Ctx       context.Context
+	Conn      net.Conn
+	InTls     bool
 }

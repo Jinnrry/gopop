@@ -120,7 +120,13 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	defer conn.Close()
 
-	session := &Session{}
+	session := &Session{
+		Conn: conn,
+	}
+	if s.TlsEnabled && s.TlsConfig != nil {
+		session.InTls = true
+	}
+
 	var (
 		eol = "\r\n"
 	)
