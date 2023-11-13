@@ -118,11 +118,13 @@ func (s *Server) handleClient(conn net.Conn) {
 			if err != nil {
 				fmt.Fprintf(conn, "-ERR %s%s", err.Error(), eol)
 			} else {
-				fmt.Fprintf(conn, "+OK Capability list follows%s", eol)
+				ret := fmt.Sprintf("+OK Capability list follows%s", eol)
+
 				for _, command := range commands {
-					fmt.Fprintf(conn, "%s%s", command, eol)
+					ret += fmt.Sprintf("%s%s", command, eol)
 				}
-				fmt.Fprintf(conn, ".%s", eol)
+				ret += fmt.Sprintf(".%s", eol)
+				fmt.Fprintf(conn, ret)
 			}
 		case "USER":
 			userName := getSafeArg(args, 0)
@@ -155,11 +157,12 @@ func (s *Server) handleClient(conn net.Conn) {
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 				} else {
-					fmt.Fprintf(conn, "+OK"+eol)
+					ret := fmt.Sprintf("+OK" + eol)
 					for _, info := range infos {
-						fmt.Fprintf(conn, "%d %d%s", info.Id, info.Size, eol)
+						ret += fmt.Sprintf("%d %d%s", info.Id, info.Size, eol)
 					}
-					fmt.Fprintf(conn, "."+eol)
+					ret += fmt.Sprintf("." + eol)
+					fmt.Fprintf(conn, ret)
 				}
 			}
 		case "UIDL":
@@ -168,11 +171,12 @@ func (s *Server) handleClient(conn net.Conn) {
 				if err != nil {
 					fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 				} else {
-					fmt.Fprintf(conn, "+OK%s", eol)
+					ret := fmt.Sprintf("+OK%s", eol)
 					for _, info := range infos {
-						fmt.Fprintf(conn, "%d %s%s", info.Id, info.UnionId, eol)
+						ret += fmt.Sprintf("%d %s%s", info.Id, info.UnionId, eol)
 					}
-					fmt.Fprintf(conn, "."+eol)
+					ret += fmt.Sprintf("." + eol)
+					fmt.Fprintf(conn, ret)
 				}
 			}
 		case "TOP":
@@ -186,9 +190,10 @@ func (s *Server) handleClient(conn net.Conn) {
 					if err != nil {
 						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 					} else {
-						fmt.Fprintf(conn, "+OK"+eol)
-						fmt.Fprintf(conn, "%s%s", res, eol)
-						fmt.Fprintf(conn, "."+eol)
+						ret := fmt.Sprintf("+OK%s", eol)
+						ret += fmt.Sprintf("%s%s", res, eol)
+						ret += fmt.Sprintf("." + eol)
+						fmt.Fprintf(conn, ret)
 					}
 				}
 			}
@@ -202,9 +207,10 @@ func (s *Server) handleClient(conn net.Conn) {
 					if err != nil {
 						fmt.Fprintf(conn, "-ERR %s %s", err.Error(), eol)
 					} else {
-						fmt.Fprintf(conn, "+OK %d%s", size, eol)
-						fmt.Fprintf(conn, "%s%s", res, eol)
-						fmt.Fprintf(conn, "."+eol)
+						ret := fmt.Sprintf("+OK %d%s", size, eol)
+						ret += fmt.Sprintf("%s%s", res, eol)
+						ret += fmt.Sprintf("." + eol)
+						fmt.Fprintf(conn, ret)
 					}
 				}
 			}
@@ -250,11 +256,12 @@ func (s *Server) handleClient(conn net.Conn) {
 				} else if len(rets) == 1 {
 					fmt.Fprintf(conn, "+OK %s%s", rets[0], eol)
 				} else {
-					fmt.Fprintf(conn, "+OK %s", eol)
-					for _, ret := range rets {
-						fmt.Fprintf(conn, "%s%s", ret, eol)
+					ret := fmt.Sprintf("+OK %s", eol)
+					for _, re := range rets {
+						ret += fmt.Sprintf("%s%s", re, eol)
 					}
-					fmt.Fprintf(conn, ".%s", eol)
+					ret += "." + eol
+					fmt.Fprintf(conn, ret)
 				}
 			}
 		}
