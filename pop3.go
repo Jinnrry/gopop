@@ -10,18 +10,20 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Server Pop3服务实例
 type Server struct {
-	Domain     string      // 域名
-	Port       int         // 端口
-	TlsEnabled bool        //是否启用Tls
-	TlsConfig  *tls.Config // tls配置
-	Action     Action
-	stop       chan bool
-	close      bool
-	lck        sync.Mutex
+	Domain           string        // 域名
+	Port             int           // 端口
+	TlsEnabled       bool          //是否启用Tls
+	TlsConfig        *tls.Config   // tls配置
+	ConnectAliveTime time.Duration // 连接存活时间，默认不超时
+	Action           Action
+	stop             chan bool
+	close            bool
+	lck              sync.Mutex
 }
 
 // NewPop3Server 新建一个服务实例
@@ -121,10 +123,24 @@ func (s *Server) handleClient(conn net.Conn) {
 	defer conn.Close()
 
 	session := &Session{
-		Conn: conn,
+		Conn:      conn,
+		AliveTime: time.Now(),
 	}
 	if s.TlsEnabled && s.TlsConfig != nil {
 		session.InTls = true
+	}
+
+	// 检查连接是否超时
+	if s.ConnectAliveTime != 0 {
+		go func() {
+			for {
+				if time.Now().Sub(session.AliveTime) >= s.ConnectAliveTime {
+					session.Conn.Close()
+					return
+				}
+				time.Sleep(3 * time.Second)
+			}
+		}()
 	}
 
 	var (
@@ -140,6 +156,7 @@ func (s *Server) handleClient(conn net.Conn) {
 			conn.Close()
 			return
 		}
+		session.AliveTime = time.Now()
 
 		cmd, args := getCommand(rawLine)
 		slog.Debug(fmt.Sprintf("cmd:%s args:%v", cmd, args))

@@ -82,7 +82,7 @@ panic("implement me")
 }
 
 func Start() {
-    pop3instance := gopop.NewPop3Server(110, "domain.com", false, action{})
+    pop3instance := gopop.NewPop3Server(110, "domain.com", false, nil, action{})
     pop3instance.Start()
 
 }

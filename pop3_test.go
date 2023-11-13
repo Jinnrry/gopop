@@ -68,6 +68,6 @@ func (a action) Custom(session *Session, cmd string, args []string) ([]string, e
 }
 
 func TestServer_Start(t *testing.T) {
-	s := NewPop3Server(110, "domain.com", false, action{})
+	s := NewPop3Server(110, "domain.com", false, nil, action{})
 	s.Start()
 }

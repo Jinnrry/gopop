@@ -3,6 +3,7 @@ package gopop
 import (
 	"context"
 	"net"
+	"time"
 )
 
 type Status int8
@@ -20,4 +21,5 @@ type Session struct {
 	Ctx       context.Context
 	Conn      net.Conn
 	InTls     bool
+	AliveTime time.Time
 }
